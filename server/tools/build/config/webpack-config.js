@@ -4,10 +4,10 @@ const webpack = require("webpack");
 
 const ROOT = '../../../';
 
-const APP_FOLDER = PATH.resolve(__dirname, ROOT, 'app/');
+const APP_FOLDER = PATH.resolve(__dirname, ROOT, 'server/');
 const APP_ENTRY_FILE = PATH.resolve(__dirname, ROOT, APP_FOLDER, 'client.js');
 
-const BUILD_FOLDER = PATH.resolve(__dirname, ROOT, 'app/public/js/');
+const BUILD_FOLDER = PATH.resolve(__dirname, ROOT, 'server/public/js/');
 const PUBLIC_PATH = '/js/';
 
 const BUILD_FILE = 'app.js';

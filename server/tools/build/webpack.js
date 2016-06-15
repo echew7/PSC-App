@@ -21,7 +21,7 @@ const printReport = function(stats) {
     }));    
 };
 
-gulp.task('build:app', function(callback) {
+gulp.task('build:server', function(callback) {
     compiler.run(function(err, stats) {
         if(err) {
             gutil.log('error', new gutil.PluginError('[webpack]', err));
@@ -32,7 +32,7 @@ gulp.task('build:app', function(callback) {
     });
 });
 
-gulp.task('build:watch:app', function(callback) {
+gulp.task('build:watch:server', function(callback) {
     compiler.watch({            
         aggregateTimeout: 300
     }, function(err, stats) {
