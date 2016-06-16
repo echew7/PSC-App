@@ -1,17 +1,13 @@
 import baseManager from './base-manager';
+import nconf from 'nconf';
 import assert from 'assert';
-import mongodb from 'mongodb';
+import mongoose from 'mongoose';
 
-const TEST_DB = 'mongodb://' + process.env.TEST_USER + ':' + process.env.TEST_PASSWORD + '@ds015584.mlab.com:15584/psc-test-db';
+const TEST_DB = 'mongodb://' + nconf.get('test_db_user') + ':' + nconf.get('test_db_password') + '@ds015584.mlab.com:15584/psc-test-db';
 
 const dbManager = Object.assign({}, baseManager, {
     configureDevelopmentEnv(app) {
-        const mongoClient = mongodb.MongoClient;
-        mongoClient.connect(TEST_DB, function(err, db) {
-            assert.equal(null, err);
-            console.log("Connected correctly to database.");
-            db.close();
-        });
+      mongoose.connect(TEST_DB);
     }
 });
 

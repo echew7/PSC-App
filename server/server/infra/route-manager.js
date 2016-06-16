@@ -20,11 +20,9 @@ const routeManager = Object.assign({}, baseManager, {
         const router = express.Router();
         
         /* Create page routes here */
-
         router.get('*', (req, res) => {
             res.render('index');
         });
-
         return router;
     },
 

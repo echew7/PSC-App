@@ -46,10 +46,13 @@
     "webpack": "^1.12.2"
   },
   "dependencies": {
+    "bcrypt": "^0.8.7",
     "compression": "^1.6.0",
     "express": "^4.13.3",
     "express-handlebars": "^2.0.1",
+    "jsonwebtoken": "^7.0.1",
     "mongodb": "^2.1.18",
+    "mongoose": "^4.5.0",
     "morgan": "^1.6.1",
     "nconf": "^0.8.2",
     "npm-run-all": "^2.1.2"
