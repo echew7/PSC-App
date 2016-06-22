@@ -32,9 +32,13 @@ const routeManager = Object.assign({}, baseManager, {
 
     /* Create API calls here */
 
-    /* USERS API (NOTE: The order of the method declarations below matter due to middleware) */
+    /* USERS API
+     *
+     * NOTE: The order of the method declarations below are
+     * IMPORTANT due to the layers of authentication middleware
+     */
 
-    /* Unauthenticated calls */
+    /*** UNAUTHENTICATED CALLS ***/
 
     /* Authenticate user and retrieve auth token */
     router.post('/users/authenticate', function(req, res) {
@@ -70,7 +74,10 @@ const routeManager = Object.assign({}, baseManager, {
       }); 
     });
 
-    /* Authentication middleware */
+    /*** NON-ADMIN AUTHENTICATED CALLS ***/
+
+    /* Layer of authentication middleware that prevents
+       unauthenticated users from accessing the API calls below */
     router.use((req, res, next) => {
       /* Check header or url parameters or post parameters for token */
       const token = req.body.token || req.query.token || req.headers['x-access-token'];
@@ -94,9 +101,7 @@ const routeManager = Object.assign({}, baseManager, {
       }
     });
 
-    /* Non-admin authenticated calls */
-
-    /* Fetch user */
+    /* Fetch current authenticated user */
     router.get('/users', function(req, res) {
       User.retrieve(req.decoded.username, function(user) {
         if (user === userConstants.USER_NOT_FOUND)
@@ -106,7 +111,7 @@ const routeManager = Object.assign({}, baseManager, {
       });
     });
 
-    /* Update user */
+    /* Update current authenticated user */
     router.put('/users', function(req, res) {
       User.update(req.decoded.username, req.body || req.query, function(tkn) {
         if (tkn === userConstants.USER_NOT_FOUND)
@@ -116,7 +121,7 @@ const routeManager = Object.assign({}, baseManager, {
       });
     });
 
-    /* Delete user */
+    /* Delete current authenticated user */
     router.delete('/users', function(req, res) {
       User.remove(req.decoded.username, function(success) {
         if (success === false)
@@ -128,7 +133,11 @@ const routeManager = Object.assign({}, baseManager, {
 
     });
 
-    /* Admin authentication middleware */
+    /*** ADMIN AUTHENTICATED CALLS ***/
+
+
+    /* Layer of authentication middleware that prevents
+       non admin users from accessing the API calls below */
     router.use((req, res, next) => {
       /* Verify and decode token */
       if (req.decoded.admin === true) {
@@ -140,8 +149,6 @@ const routeManager = Object.assign({}, baseManager, {
         });
       }
     });
-
-    /* Admin authenticated calls */
 
     /* Fetch any specified user */
     router.get('/admin/users/:username', function(req, res) {
