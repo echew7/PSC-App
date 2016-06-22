@@ -7,6 +7,7 @@ import baseManager from './base-manager';
 import User from '../models/user';
 import userConstants from '../constants/user-constants';
 import jwt from 'jsonwebtoken';
+import nconf from 'nconf';
 
 const routeManager = Object.assign({}, baseManager, {
   configureDevelopmentEnv(app) {
@@ -37,39 +38,36 @@ const routeManager = Object.assign({}, baseManager, {
 
     /* Authenticate user and retrieve auth token */
     router.post('/users/authenticate', function(req, res) {
-      const tkn = User.authenticate(req.body.username, req.body.password);
+      User.authenticate(req.body.username, req.body.password, function(tkn) {
+        if (tkn === userConstants.USER_NOT_FOUND) {
+          return res.json({ success: false, message: 'Authentication failed. User not found.' });
+        }
 
-      if (tkn === userConstants.USER_NOT_FOUND) {
-        return res.json({ success: false, message: 'Authentication failed. User not found.' });
-      }
+        if (tkn === userConstants.WRONG_PASSWORD) {
+          return res.json({ success: false, message: 'Authentication failed. Wrong password.' });
+        }
 
-      if (tkn === userConstants.WRONG_PASSWORD) {
-        return res.json({ success: false, message: 'Authentication failed. Wrong password.' });
-      }
-
-      res.json({
-          success: true,
-          message: 'Enjoy your token!',
-          token: tkn
+        res.json({
+            success: true,
+            message: 'Enjoy your token!',
+            token: tkn
         });
-    });
-
-    /* Create admin user */
-    router.post('/users/admin', function(req, res) {
-      if (req.body.admin_password !== nconf.get('admin_password'))
-        return res.json({ success: false, message: 'Failed to create admin user.' });
-
-      const isSuccessful = User.create(req.body.username, req.body.password, true);   
-
-      if (isSuccessful) res.json({ success: true, message: 'Admin user created!' });
-      else res.json({ success: false, message: 'Failed to create admin user.' });
+      });
     });
 
     /* Create user */
     router.post('/users', function(req, res) {
-      const isSuccessful = User.create(req.body.username, req.body.password, false);   
-      if (isSuccessful) res.json({ success: true, message: 'User created!' });
-      else res.json({ success: false, message: 'Failed to create user.' });
+      var admin = false;
+
+      if (req.body.admin_password === nconf.get('admin_password'))
+        admin = true;
+
+      User.create(req.body.username, req.body.password, admin, function(success) {
+        if (success === true)
+          res.json({ success: true, message: 'User created!' });
+        else
+          res.json({ success: false, message: 'Failed to create user.' });
+      }); 
     });
 
     /* Authentication middleware */
@@ -83,7 +81,7 @@ const routeManager = Object.assign({}, baseManager, {
           if (err) {
             return res.json({ success: false, message: 'Failed to authenticate token.' });    
           } else {
-            req.decoded = decoded;    
+            req.decoded = decoded._doc;    
             next();
           }
         });
@@ -100,32 +98,34 @@ const routeManager = Object.assign({}, baseManager, {
 
     /* Fetch user */
     router.get('/users', function(req, res) {
-      const user = Users.find(req.decode.username);
-      if (user === userConstants.USER_NOT_FOUND)
+      User.retrieve(req.decoded.username, function(user) {
+        if (user === userConstants.USER_NOT_FOUND)
         return res.json({ success: false, message: 'User not found.' });
 
-      res.json({ success: true, payload: user });
+        res.json({ success: true, payload: user }); 
+      });
     });
 
     /* Update user */
     router.put('/users', function(req, res) {
-      const success = Users.update(req.decode.username,
-                                   req.body.update || req.query.update);
+      User.update(req.decoded.username, req.body || req.query, function(tkn) {
+        if (tkn === userConstants.USER_NOT_FOUND)
+          return res.json({ success: false, message: 'User not found.' });
 
-      if (success === userConstants.USER_NOT_FOUND)
-        return res.json({ success: false, message: 'User not found.' });
-
-      res.json({ success: true, message: 'User updated.' });
+        res.json({ success: true, message: 'User updated. Enjoy your new token!', token: tkn });
+      });
     });
 
     /* Delete user */
     router.delete('/users', function(req, res) {
-      const success = Users.remove(req.decode.username);
+      User.remove(req.decoded.username, function(success) {
+        if (success === false)
+          return res.json({ success: false, message: 'Failed to delete user.' });
 
-      if (success === false)
-        return res.json({ success: false, message: 'Failed to delete user.' });
+        res.json({ success: true, message: 'User deleted.' }); 
+      });
 
-      res.json({ success: true, message: 'User deleted.' });
+
     });
 
     /* Admin authentication middleware */
@@ -144,40 +144,42 @@ const routeManager = Object.assign({}, baseManager, {
     /* Admin authenticated calls */
 
     /* Fetch any specified user */
-    router.get('/admin/users', function(req, res) {
-      const user = Users.find(req.body.username || req.query.username);
-      
-      if (user === userConstants.USER_NOT_FOUND)
-        return res.json({ success: false, message: 'User not found.' });
+    router.get('/admin/users/:username', function(req, res) {
+      User.retrieve(req.params.username, function(user) {
+        if (user === userConstants.USER_NOT_FOUND)
+          return res.json({ success: false, message: 'User not found.' });
 
-      res.json({ success: true, payload: user });
+        res.json({ success: true, payload: user }); 
+      });
     });
 
     /* Fetch all users */
-    router.get('/admin/users/all', function(req, res) {
-      const user = Users.findAll();
-      res.json({ success: true, payload: user });
+    router.get('/admin/users', function(req, res) {
+      User.retrieveAll(function(users) {
+        res.json({ success: true, payload: users });
+      });
     });
 
     /* Update any specified user */
-    router.put('/admin/users', function(req, res) {
-      const success = Users.update(req.body.username || req.query.username,
-                                   req.body.update || req.query.update);
+    router.put('/admin/users/:username', function(req, res) {
+      User.update(req.params.username,
+                  req.body,
+                  function(tkn) {
+        if (tkn === userConstants.USER_NOT_FOUND)
+          return res.json({ success: false, message: 'User not found.' });
 
-      if (success === userConstants.USER_NOT_FOUND)
-        return res.json({ success: false, message: 'User not found.' });
-
-      res.json({ success: true, message: 'User updated.' });
+        res.json({ success: true, message: 'User updated. Enjoy your new token!', token: tkn });
+      });
     });
 
     /* Delete any specified user */
-    router.delete('/admin/users', function(req, res) {
-      const success = Users.remove(req.body.username || req.query.username);
+    router.delete('/admin/users/:username', function(req, res) {
+      User.remove(req.params.username, function(success) {
+        if (success === false)
+          return res.json({ success: false, message: 'Failed to delete user.' });
 
-      if (success === false)
-        return res.json({ success: false, message: 'Failed to delete user.' });
-
-      res.json({ success: true, message: 'User deleted.' });
+        res.json({ success: true, message: 'User deleted.' }); 
+      });
     });
 
     return router;
