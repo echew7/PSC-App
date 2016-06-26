@@ -171,11 +171,11 @@ const routeManager = Object.assign({}, baseManager, {
     router.put('/admin/users/:username', function(req, res) {
       User.update(req.params.username,
                   req.body,
-                  function(tkn) {
-        if (tkn === userConstants.USER_NOT_FOUND)
+                  function(success) {
+        if (success === userConstants.USER_NOT_FOUND)
           return res.json({ success: false, message: 'User not found.' });
 
-        res.json({ success: true, message: 'User updated. Enjoy your new token!', token: tkn });
+        res.json({ success: true, message: 'User updated.' });
       });
     });
 
